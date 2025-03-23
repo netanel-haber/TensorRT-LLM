@@ -109,8 +109,8 @@ def main(*,
            for submodule in submodules):
         build_run('git submodule update --init --recursive')
     on_windows = platform.system() == "Windows"
-    requirements_filename = "requirements-dev-windows.txt" if on_windows else "requirements-dev.txt"
-    build_run(f"\"{sys.executable}\" -m pip install -r {requirements_filename}")
+    "requirements-dev-windows.txt" if on_windows else "requirements-dev.txt"
+    # build_run(f"\"{sys.executable}\" -m pip install -r {requirements_filename}")
     # Ensure TRT is installed on windows to prevent surprises.
     reqs = check_output([sys.executable, "-m", "pip", "freeze"])
     installed_packages = [r.decode().split("==")[0] for r in reqs.split()]
