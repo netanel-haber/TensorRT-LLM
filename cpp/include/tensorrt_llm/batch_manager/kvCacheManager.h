@@ -333,7 +333,6 @@ public:
         , mNumTokens(numTokens)
         , mBeamWidth(beamWidth)
         , mKvCacheRetentionConfig(std::move(kvCacheRetentionConfig))
-        , mCyclicThreshold(cyclicThreshold)
     {
         auto const numWindowSizes = windowSizeToMetadata.size();
         mCacheBlockIds.reserve(numWindowSizes);
@@ -436,9 +435,9 @@ public:
     // @brief Check whether the sequence uses cyclic KV cache.
     // @return `true` if we have begun overwriting the beginning of the sequence's KV cache.
     // @details If `true`, we cannot store the sequence's KV cache for reuse.
-    [[nodiscard]] bool isCyclic(SizeType32 windowSize) const
+    [[nodiscard]] bool isCyclic(WindowSizeMetadata metadata) const
     {
-        return mNumTokens >= windowSize;
+        return mNumTokens >= metadata.maxTokenNum;
     }
 
 private:
@@ -549,8 +548,10 @@ public:
     //! \brief Get the ids of all newly allocated (not reused) blocks for the sequence.
     std::vector<KVCacheBlock::IdType> getNewlyAllocatedBlockIds(GenerationRequest const& sequence) const;
 
-    //! \brief Release blocks of the sequence. Store blocks for reuse if llmReqeust is provided.
-    void releaseBlocks(GenerationRequest& sequence, OptionalRef<LlmRequest const> llmRequest = std::nullopt);
+    void storeBlocksForReuse(GenerationRequest& sequence, OptionalRef<LlmRequest const> llmRequest);
+
+    //! \brief Release blocks of the sequence.
+    void releaseBlocks(GenerationRequest& sequence);
 
     //! \brief Simulate freeing all blocks for that sequence to check impact on number of free blocks
     void schedulingReleaseBlocks(LlmRequest::RequestIdType requestId);
