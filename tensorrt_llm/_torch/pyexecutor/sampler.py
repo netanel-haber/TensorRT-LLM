@@ -626,6 +626,17 @@ class TRTLLMSampler(Sampler):
         self.algs.decoder.forward_async(self.store["decoder_state"],
                                         decoding_input)
 
+        if "d2t" in model_outputs:
+            seq_slots = torch.as_tensor([
+                request.seq_slot for request in scheduled_requests.all_requests
+            ]).to(device="cuda", non_blocking=True)
+            all_new_tokens: torch.Tensor = self.store[
+                "decoder_state"].all_new_tokens
+            transposed_new_tokens = all_new_tokens.squeeze(-1).transpose(
+                0, 1)[seq_slots]
+            indexed = model_outputs["d2t"][transposed_new_tokens]
+            transposed_new_tokens.index_add_(0, seq_slots, indexed)
+
         new_output_tokens = self.store["decoder_state"].all_new_tokens.to(
             'cpu', non_blocking=True)
         finished_sum = self.store["decoder_state"].finished_sum.to(

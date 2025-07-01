@@ -551,14 +551,20 @@ def instantiate_sampler(engine: PyTorchModelEngine,
     if mapping.cp_config.get('cp_type') == 'star_attention':
         assert pytorch_backend_config.attn_backend == "FLASHINFER_STAR_ATTENTION", "attention backend of star attention should be 'FLASHINFER_STAR_ATTENTION'"
         return TorchSampler(sampler_args)
-    if engine.spec_config is not None and engine.spec_config.spec_dec_mode.has_spec_decoder(
-    ):
-        return get_spec_decoder(sampler_args, engine.spec_config)
-    if pytorch_backend_config.enable_trtllm_sampler:
+
+    def trtllm_sampler():
         decoding_mode = get_decoding_mode(executor_config)
         return TRTLLMSampler(executor_config, engine.model, engine.dtype,
                              mapping, decoding_mode,
                              pytorch_backend_config.disable_overlap_scheduler)
+
+    if engine.spec_config is not None and engine.spec_config.spec_dec_mode.has_spec_decoder(
+    ):
+        if engine.spec_config.spec_dec_mode.is_eagle3():
+            return trtllm_sampler()
+        return get_spec_decoder(sampler_args, engine.spec_config)
+    if pytorch_backend_config.enable_trtllm_sampler:
+        return trtllm_sampler()
     if not engine.model.model_config.is_generation:
         # NOTE: choose sampler based on model type
         return EarlyStopSampler()
